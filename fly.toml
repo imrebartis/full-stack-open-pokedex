@@ -2,28 +2,78 @@
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-
 app = 'full-stack-open-pokedex-summer-voice-6058'
 primary_region = 'arn'
 
 [build]
 
 [env]
-  PORT = "3000"
-
-[processes]
-  app = "node app.js"
-
+PORT = "3000"
 
 [http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = 'stop'
-  auto_start_machines = true
-  min_machines_running = 0
-  processes = ['app']
+internal_port = 3000
+force_https = true
+processes = ["app"]
+
+[[processes]]
+name = "app"
+command = "node app.js"
+
+[http_service.health_check]
+grace_period = "5s"
+interval = "5s"
+method = "GET"
+timeout = "2s"
+path = "/health"
+protocol = "http"
+
+[deploy]
+strategy = "canary"
+release_command = """
+    node -e '
+      const http = require("http");
+      const { spawn } = require("child_process");
+
+      // Start the application
+      const app = spawn("node", ["app.js"], {
+        stdio: "inherit",
+        env: { ...process.env, PORT: "3000" }
+      });
+
+      // Give the app some time to start
+      setTimeout(() => {
+        // Check health endpoint
+        http.get("http://localhost:3000/health", res => {
+          if (res.statusCode !== 200) {
+            console.error("Health check failed with status:", res.statusCode);
+            process.exit(1);
+          }
+          console.log("Health check passed");
+          app.kill();
+          process.exit(0);
+        }).on("error", err => {
+          console.error("Health check request failed:", err);
+          process.exit(1);
+        });
+      }, 3000); // Wait 3 seconds before checking
+
+      // Handle app errors
+      app.on("error", (err) => {
+        console.error("App failed to start:", err);
+        process.exit(1);
+      });
+    '
+  """
+
+[deploy.phases]
+canary_weight = 10
+wait_timeout = "30s"
+require_healthy = true
+health_check_timeout = "15s"
+rollback_on_failure = true
+min_success_duration = "10s"
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
+memory = '1gb'
+cpu_kind = 'shared'
+cpus = 1
