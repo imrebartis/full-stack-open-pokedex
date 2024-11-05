@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   simple_deployment_pipeline:
@@ -38,3 +41,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           DEFAULT_BUMP: patch
+  notify:
+    needs: [simple_deployment_pipeline, tag_release]
+    runs-on: ubuntu-20.04
+    if: always()
+    steps:
+      - name: Build succeeded
+        uses: Ilshidur/action-discord@master
+        if: ${{ !contains(needs.*.result, 'failure') }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            A new version of Pokedex has been deployed
+            to https://full-stack-open-pokedex-summer-voice-6058.fly.dev/
+            by: ${{ github.actor }}
+
+      - name: Build failed
+        uses: Ilshidur/action-discord@master
+        if: ${{ contains(needs.*.result, 'failure') }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            commit ${{ github.sha }} by ${{ github.actor }} broke the build :(
