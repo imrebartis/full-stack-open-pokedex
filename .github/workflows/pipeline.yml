@@ -46,18 +46,22 @@ jobs:
     runs-on: ubuntu-20.04
     if: always()
     steps:
-      - name: A new version of Pokedex deployed
-        uses: rjstone/discord-webhook-notify@v1
+      - name: Build succeeded
+        uses: Ilshidur/action-discord@master
         if: ${{ !contains(needs.*.result, 'failure') }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          severity: info
-          details: to https://full-stack-open-pokedex-summer-voice-6058.fly.dev/ by `${{ github.actor }}`
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          args: |
+            A new version of Pokedex has been deployed
+            to https://full-stack-open-pokedex-summer-voice-6058.fly.dev/
+            by: ${{ github.actor }}
 
       - name: Build failed
-        uses: rjstone/discord-webhook-notify@v1
+        uses: Ilshidur/action-discord@master
         if: ${{ contains(needs.*.result, 'failure') }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          severity: error
-          details: commit ${{ github.sha }} by `${{ github.actor }}` broke the build :(
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          args: |
+            commit ${{ github.sha }} by ${{ github.actor }} broke the build :(
