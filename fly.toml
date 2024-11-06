@@ -20,58 +20,60 @@ name = "app"
 command = "node app.js"
 
 [http_service.health_check]
-grace_period = "5s"
+grace_period = "10s"
 interval = "5s"
 method = "GET"
-timeout = "2s"
+timeout = "5s"
 path = "/health"
 protocol = "http"
 
 [deploy]
 strategy = "canary"
 release_command = """
-    node -e '
-      const http = require("http");
-      const { spawn } = require("child_process");
+  node -e '
+    const http = require("http");
+    const { spawn } = require("child_process");
+    console.log("Starting application...");
 
-      // Start the application
-      const app = spawn("node", ["app.js"], {
-        stdio: "inherit",
-        env: { ...process.env, PORT: "3000" }
-      });
+    const app = spawn("node", ["app.js"], {
+      stdio: "inherit",
+      env: { ...process.env, PORT: "3000" }
+    });
 
-      // Give the app some time to start
-      setTimeout(() => {
-        // Check health endpoint
-        http.get("http://localhost:3000/health", res => {
-          if (res.statusCode !== 200) {
-            console.error("Health check failed with status:", res.statusCode);
-            process.exit(1);
-          }
+    const healthCheck = () => {
+      console.log("Running health check...");
+      http.get("http://localhost:3000/health", res => {
+        console.log("Health check status:", res.statusCode);
+        if (res.statusCode === 200) {
           console.log("Health check passed");
           app.kill();
           process.exit(0);
-        }).on("error", err => {
-          console.error("Health check request failed:", err);
+        } else {
+          console.error("Health check request failed");
           process.exit(1);
-        });
-      }, 3000); // Wait 3 seconds before checking
-
-      // Handle app errors
-      app.on("error", (err) => {
-        console.error("App failed to start:", err);
+        }
+      }).on("error", err => {
+        console.error("Health check request failed:", err);
         process.exit(1);
       });
-    '
-  """
+    };
+
+    setTimeout(healthCheck, 10000);
+
+    app.on("error", (err) => {
+      console.error("App failed to start:", err);
+      process.exit(1);
+    });
+  '
+"""
 
 [deploy.phases]
-canary_weight = 10
-wait_timeout = "30s"
+canary_weight = 20
+wait_timeout = "60s"
 require_healthy = true
-health_check_timeout = "15s"
+health_check_timeout = "30s"
 rollback_on_failure = true
-min_success_duration = "10s"
+min_success_duration = "20s"
 
 [[vm]]
 memory = '1gb'
