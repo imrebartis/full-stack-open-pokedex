@@ -53,9 +53,9 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           args: |
-            A new version of Pokedex has been deployed
+            "✅ A new version of Pokedex has been deployed
             to https://full-stack-open-pokedex-summer-voice-6058.fly.dev/
-            by: ${{ github.actor }}
+            by: ${{ github.actor }}"
 
       - name: Build failed
         uses: Ilshidur/action-discord@master
@@ -64,4 +64,4 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           args: |
-            commit ${{ github.sha }} by ${{ github.actor }} broke the build :(
+            "❌ commit ${{ github.sha }} by ${{ github.actor }} broke the build 😭"
